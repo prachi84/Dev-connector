@@ -1,17 +1,24 @@
 const express = require('express');
 const bcrypt = require ('bcryptjs');
 const gravatar= require ('gravatar');
-const jwt = require('jsonwebtoken');
+const jwt = require ('jsonwebtoken');
+const passport = require ('passport');
 const router = express.Router();
 const User = require ('../../models/User');
 const keys = require('../../config/keys');
+const validateRegisterInput = require('../../validation/register');
 
 
 //@route POST api/users/register
 //@desc Register a users
 //@access public
-
 router.post('/register',(req, res) => {
+  //validation
+ const {errors, isValid} = validateRegisterInput(req.body);
+ 
+ if (!isValid){
+   return res.status(400).json(errors);
+ }
   User.findOne({email:req.body.email})
   .then(user => {
     if (user){
@@ -72,14 +79,25 @@ router.post('/login', (req,res)=>{
          keys.secretOrkey,
         {expiresIn: 3600},
         (err,token) => {
-          return res.json ({token:'Bearer' + token });
+          return res.json ({token:'Bearer ' + token });
        })
-         } else {
+      } 
+      else {
        return res.status(400).json({password: 'Incorrect password'});
       }
      })
    })
   .catch(err => console.log (err))
 });
+
+//@route POST api/users/current
+//@desc Return current user info
+//@access Private
+router.get(
+  '/current',
+passport.authenticate('jwt', {session:false}),
+  (req, res) => {
+    res.json(req.user);
+  });
 
 module.exports = router;
